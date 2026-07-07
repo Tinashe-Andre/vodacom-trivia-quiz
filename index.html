@@ -80,6 +80,19 @@
     font-size: 0.85rem;
     padding: 2rem 1rem 1rem;
   }
+
+  /* White circle behind the logo so its red doesn't vanish into the
+     red navbar background */
+  .logo-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+  }
 </style>
 </head>
 <body>
@@ -90,11 +103,13 @@
     <!-- ============================================================
          LOGO
          Vodacom logo, served from logo.png sitting in the same folder
-         as this index.html file. The file is 1383x1382px (roughly
-         square), so we just fix the height and let the width follow
-         automatically to keep it from looking stretched.
+         as this index.html file. It's wrapped in a small white circle
+         ("badge") - otherwise the logo's red circle disappears against
+         the navbar's red background, since they're the same colour.
     ============================================================ -->
-    <img src="logo.png" alt="Vodacom" height="32" style="width: auto;">
+    <span class="logo-badge">
+      <img src="logo.png" alt="Vodacom" height="24" style="width: auto;">
+    </span>
     <span class="navbar-brand text-white fw-bold mb-0">Vodacom Early Careers</span>
   </div>
 </nav>
