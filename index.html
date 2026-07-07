@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vodacom Early Careers — 30-Sec Trivia</title>
+
+<!-- Bootstrap CSS from CDN, exactly as advised -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+  /* ---- A few small custom styles on top of Bootstrap ---- */
+  body {
+    background: #f2f2f2;
+    min-height: 100vh;
+  }
+  .vc-navbar {
+    background: #E60000; /* Vodacom red */
+  }
+  .vc-card {
+    max-width: 600px;
+    margin: 3rem auto;
+    border: none;
+    border-radius: 14px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+  }
+  #timer {
+    font-weight: 700;
+    font-size: 1.4rem;
+  }
+  #timer.low-time {
+    color: #E60000;
+  }
+  .option-btn {
+    text-align: left;
+    white-space: normal;
+  }
+  .option-btn.correct {
+    background-color: #198754 !important;
+    color: #fff !important;
+    border-color: #198754 !important;
+  }
+  .option-btn.wrong {
+    background-color: #dc3545 !important;
+    color: #fff !important;
+    border-color: #dc3545 !important;
+  }
+  #progress-dots span {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #ccc;
+    margin: 0 3px;
+  }
+  #progress-dots span.done-correct { background: #198754; }
+  #progress-dots span.done-wrong { background: #dc3545; }
+  #progress-dots span.active { background: #E60000; }
+</style>
+</head>
+<body>
+
+<nav class="navbar vc-navbar mb-0">
+  <div class="container">
+    <span class="navbar-brand text-white fw-bold mb-0">Vodacom Early Careers</span>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- ================= LOGIN SCREEN ================= -->
+  <div id="login-screen" class="card vc-card">
+    <div class="card-body p-4">
+      <h2 class="text-center mb-4">Welcome!</h2>
+
+      <ul class="nav nav-pills nav-justified mb-4" id="login-tabs">
+        <li class="nav-item"><button type="button" class="nav-link active" data-tab="guest">Quick Guest</button></li>
+        <li class="nav-item"><button type="button" class="nav-link" data-tab="account">Log In / Sign Up</button></li>
+      </ul>
+
+      <!-- Guest panel: just enough to know who played, no password -->
+      <div id="guest-panel">
+        <div class="mb-3">
+          <label class="form-label">Name</label>
+          <input id="guest-name" type="text" class="form-control" placeholder="e.g. Thabo Nkosi">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Email</label>
+          <input id="guest-email" type="email" class="form-control" placeholder="you@example.com">
+        </div>
+        <div id="guest-error" class="text-danger small mb-2 d-none"></div>
+        <button id="guest-continue-btn" class="btn btn-danger w-100">Continue as Guest</button>
+      </div>
+
+      <!-- Account panel: real username/password login or sign up -->
+      <div id="account-panel" class="d-none">
+        <div class="btn-group w-100 mb-3" role="group">
+          <button type="button" id="mode-login-btn" class="btn btn-outline-dark active">Log In</button>
+          <button type="button" id="mode-signup-btn" class="btn btn-outline-dark">Sign Up</button>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Username</label>
+          <input id="account-username" type="text" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Password</label>
+          <input id="account-password" type="password" class="form-control">
+        </div>
+        <div id="confirm-password-wrapper" class="mb-3 d-none">
+          <label class="form-label">Confirm Password</label>
+          <input id="account-confirm-password" type="password" class="form-control">
+        </div>
+        <div id="account-error" class="text-danger small mb-2 d-none"></div>
+        <button id="account-submit-btn" class="btn btn-danger w-100">Log In</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= START SCREEN ================= -->
+  <div id="start-screen" class="card vc-card d-none">
+    <div class="card-body text-center p-5">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <span class="text-muted">Welcome, <strong id="welcome-name"></strong></span>
+        <button id="logout-btn" class="btn btn-sm btn-outline-secondary">Log out</button>
+      </div>
+      <h2 class="card-title mb-3">30-Second Trivia Challenge</h2>
+      <p class="card-text text-muted">
+        Answer 5 quick questions about Vodacom Early Careers correctly, all within 30 seconds, to win a prize!
+      </p>
+      <button id="start-btn" class="btn btn-danger btn-lg mt-3 px-5">Start Game</button>
+    </div>
+  </div>
+
+  <!-- ================= QUIZ SCREEN ================= -->
+  <div id="quiz-screen" class="card vc-card d-none">
+    <div class="card-body p-4">
+
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div id="progress-dots"></div>
+        <div id="timer">30s</div>
+      </div>
+
+      <h5 id="question-text" class="mb-4"></h5>
+
+      <div id="options-container" class="d-grid gap-2"></div>
+
+    </div>
+  </div>
+
+  <!-- ================= WIN SCREEN ================= -->
+  <div id="win-screen" class="card vc-card d-none">
+    <div class="card-body text-center p-5">
+      <h2 class="text-success mb-3">🎉 Congratulations — You've Won a Prize!</h2>
+      <p class="text-muted mb-4">You answered all 5 questions correctly within 30 seconds.</p>
+      <div class="d-grid gap-2 col-8 mx-auto">
+        <button class="btn btn-outline-danger" id="win-share-btn">Share to Social Media</button>
+        <a class="btn btn-danger" href="https://www.vodacom.com/early-careers.php" target="_blank" rel="noopener">
+          Register for Vodacom Early Careers
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= LOSE SCREEN ================= -->
+  <div id="lose-screen" class="card vc-card d-none">
+    <div class="card-body text-center p-5">
+      <h2 class="mb-3">⏰ Sorry — Play Again!</h2>
+      <p class="text-muted mb-4">You didn't get all 5 correct in time. Give it another go!</p>
+      <div class="d-grid gap-2 col-8 mx-auto">
+        <button class="btn btn-outline-danger" id="lose-share-btn">Share to Social Media</button>
+        <a class="btn btn-danger" href="https://www.vodacom.com/early-careers.php" target="_blank" rel="noopener">
+          Register for Vodacom Early Careers
+        </a>
+        <button class="btn btn-secondary" id="retry-btn">Try Again</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* =========================================================================
+   VODACOM 30-SEC TRIVIA GAME
+   -------------------------------------------------------------------------
+   How this file is organised (read it top to bottom):
+   0. AuthAPI          - guest sign-in / username+password (swappable later)
+   1. QUESTION_BANK    - all 15 questions/answers from the brief
+   2. "Seen questions" tracking - so repeat plays don't show the same
+      5 questions again and again, using the browser's localStorage
+   3. Game state + timer logic
+   4. Rendering functions (drawing the question/options on screen)
+   5. Event listeners wiring buttons to functions
+   6. Login screen wiring
+   ========================================================================= */
+
+// ---------------------------------------------------------------------
+// 0. AUTH MODULE
+// -------------------------------------------------------------------
+// The rest of the app NEVER touches localStorage for login directly -
+// it only calls AuthAPI.signUp(), AuthAPI.logIn(), AuthAPI.continueAsGuest(),
+// AuthAPI.getCurrentUser() and AuthAPI.logOut(). Today those functions
+// are backed by localStorage. When a real backend exists, you only need
+// to change what happens INSIDE these functions (swap the body for a
+// fetch() call to your API) - everything else in the app that calls
+// AuthAPI stays exactly the same, because the function names and the
+// shape of what they return ({ success, user, error }) don't change.
+//
+// SECURITY NOTE: storing accounts in localStorage and hashing passwords
+// in the browser is fine for a demo, but it is NOT secure for real users
+// - anyone on the same device/browser can read localStorage directly.
+// A real system must check passwords on a SERVER (e.g. with bcrypt/Argon2)
+// and never rely on the client alone. Treat this as "works today, replace
+// before real passwords are involved."
+// ---------------------------------------------------------------------
+
+const USERS_KEY = "vodacomTrivia_users";
+const CURRENT_USER_KEY = "vodacomTrivia_currentUser";
+
+async function hashPassword(password, saltHex) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(saltHex + password);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function generateSalt() {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+function generateId() {
+  return "u_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
+}
+
+function getStoredUsers() {
+  const raw = localStorage.getItem(USERS_KEY);
+  return raw ? JSON.parse(raw) : [];
+}
+
+function saveStoredUsers(users) {
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+}
+
+const AuthAPI = {
+
+  // ---- Guests: no password, just enough to know who played ----
+  async continueAsGuest(name, email) {
+    // SWAP POINT: replace this block with a real request, e.g.
+    //   const res = await fetch("/api/guest", { method: "POST",
+    //     headers: {"Content-Type":"application/json"},
+    //     body: JSON.stringify({ name, email }) });
+    //   return await res.json(); // { success, user, error }
+    if (!name.trim() || !email.trim()) {
+      return { success: false, error: "Please enter both your name and email." };
+    }
+    const user = { id: generateId(), type: "guest", name: name.trim(), email: email.trim() };
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+    return { success: true, user };
+  },
+
+  // ---- Sign up: create a new username/password account ----
+  async signUp(username, password) {
+    // SWAP POINT: replace this block with fetch("/api/signup", { ... })
+    username = username.trim();
+    if (!username || !password) {
+      return { success: false, error: "Please enter a username and password." };
+    }
+    if (password.length < 6) {
+      return { success: false, error: "Password must be at least 6 characters." };
+    }
+    const users = getStoredUsers();
+    if (users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+      return { success: false, error: "That username is already taken." };
+    }
+    const salt = generateSalt();
+    const passwordHash = await hashPassword(password, salt);
+    const newUser = {
+      id: generateId(), type: "account", username, salt, passwordHash,
+      createdAt: new Date().toISOString()
+    };
+    users.push(newUser);
+    saveStoredUsers(users);
+
+    const sessionUser = { id: newUser.id, type: "account", username };
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(sessionUser));
+    return { success: true, user: sessionUser };
+  },
+
+  // ---- Log in: check username/password against stored accounts ----
+  async logIn(username, password) {
+    // SWAP POINT: replace this block with fetch("/api/login", { ... })
+    username = username.trim();
+    const users = getStoredUsers();
+    const match = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+    if (!match) {
+      return { success: false, error: "No account found with that username." };
+    }
+    const attemptHash = await hashPassword(password, match.salt);
+    if (attemptHash !== match.passwordHash) {
+      return { success: false, error: "Incorrect password." };
+    }
+    const sessionUser = { id: match.id, type: "account", username: match.username };
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(sessionUser));
+    return { success: true, user: sessionUser };
+  },
+
+  // ---- Current session ----
+  getCurrentUser() {
+    const raw = localStorage.getItem(CURRENT_USER_KEY);
+    return raw ? JSON.parse(raw) : null;
+  },
+
+  logOut() {
+    localStorage.removeItem(CURRENT_USER_KEY);
+  }
+};
+
+// ---------------------------------------------------------------------
+// 1. QUESTION BANK
+// Each question has: text, an array of 4 options, and the INDEX (0-3)
+// of the correct option in that array.
+// ---------------------------------------------------------------------
+const QUESTION_BANK = [
+  { id: 1,  text: "What is the name of Vodacom's free online learning platform?",
+    options: ["TechStart", "Discover", "Code Like A Girl", "Career Hub"], correct: 0 },
+  { id: 2,  text: "Which Early Careers programme offers permanent employment?",
+    options: ["Internship Programme", "TechStart", "Bursary Programme", "Discover Graduate Programme"], correct: 3 },
+  { id: 3,  text: "How long is the Vodacom Internship Programme?",
+    options: ["6 Months", "12 Months", "18 Months", "24 Months"], correct: 1 },
+  { id: 4,  text: "TechStart is designed to help you build…",
+    options: ["Driving Skills", "Cooking Skills", "Digital Skills", "Sports Skills"], correct: 2 },
+  { id: 5,  text: "Which programme supports students studying STEM fields?",
+    options: ["Internship Programme", "TechStart", "External Bursary Programme", "Graduate Programme"], correct: 2 },
+  { id: 6,  text: "TechStart is available at what cost?",
+    options: ["R99 per month", "R499 once-off", "Only for Vodacom users", "Free"], correct: 3 },
+  { id: 7,  text: "What is the main goal of TechStart?",
+    options: ["Sell smartphones", "Improve network coverage", "Build digital skills for future careers", "Offer university degrees"], correct: 2 },
+  { id: 8,  text: "Which programme encourages girls to explore STEM careers?",
+    options: ["Code Like A Girl", "Graduate Programme", "Internship Programme", "TechStart"], correct: 0 },
+  { id: 9,  text: "What can you earn by completing TechStart learning modules?",
+    options: ["Cash rewards", "Digital badges", "Loyalty points", "Certificates only"], correct: 1 },
+  { id: 10, text: "Which of these skills can you learn on TechStart?",
+    options: ["Plumbing", "Carpentry", "Hairdressing", "Microsoft Office"], correct: 3 },
+  { id: 11, text: "What can learners aged 18+ access through TechStart?",
+    options: ["Student loans", "Job Board with career opportunities", "Housing Support", "Free devices"], correct: 1 },
+  { id: 12, text: "When do applications for Vodacom Early Careers close?",
+    options: ["31-Mar-26", "30-Jun-26", "31-Aug-26", "31-Dec-26"], correct: 2 },
+  { id: 13, text: "What is the first step to unlocking your future with Vodacom?",
+    options: ["Buy a phone", "Visit a Vodacom store", "Register for an Early Careers programme or TechStart", "Apply for a driver's licence"], correct: 2 },
+  { id: 14, text: "Which programme gives graduates real workplace experience through a 12-month fixed term contract?",
+    options: ["Graduate Programme", "TechStart", "Bursary Programme", "Internship Programme"], correct: 3 },
+  { id: 15, text: "Which of these is a benefit of the Vodacom Bursary Programme?",
+    options: ["Tuition and accommodation support", "Car allowance", "Gym membership", "Free holiday trips"], correct: 0 }
+];
+
+const TOTAL_TIME_SECONDS = 30;
+const QUESTIONS_PER_ROUND = 5;
+
+// ---------------------------------------------------------------------
+// 2. "SEEN QUESTIONS" MECHANISM
+// -------------------------------------------------------------------
+// Goal: when a user plays again, we don't want to show them the exact
+// same 5 questions every time. We remember (in localStorage, which
+// survives page refreshes / new visits on the same browser) which
+// question IDs the user has already SEEN.
+//
+// This is now tracked PER LOGGED-IN USER (using their user id in the
+// storage key) rather than one shared key for the whole browser -
+// now that we have logins, two different people on the same computer
+// shouldn't affect each other's "seen" progress.
+//
+// Each time a new round starts:
+//   - We look at which questions have NOT been seen yet by this user.
+//   - If there are 5 or more unseen questions, pick 5 random ones
+//     from that unseen pool.
+//   - If fewer than 5 unseen questions remain, that means the user
+//     has (almost) gone through the whole bank of 15 -> we reset the
+//     "seen" list so the questions become available again.
+// This means every question in the bank of 15 gets a fair turn
+// before anything repeats, for each individual user.
+// ---------------------------------------------------------------------
+
+function getSeenStorageKey() {
+  const uid = currentUser ? currentUser.id : "anonymous";
+  return "vodacomTrivia_seenQuestionIds_" + uid;
+}
+
+function getSeenIds() {
+  const raw = localStorage.getItem(getSeenStorageKey());
+  return raw ? JSON.parse(raw) : [];
+}
+
+function markAsSeen(ids) {
+  const current = getSeenIds();
+  const updated = Array.from(new Set([...current, ...ids]));
+  localStorage.setItem(getSeenStorageKey(), JSON.stringify(updated));
+}
+
+function resetSeenIds() {
+  localStorage.removeItem(getSeenStorageKey());
+}
+
+// Fisher-Yates shuffle - simple, standard way to randomise an array
+function shuffle(array) {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function pickQuestionsForRound() {
+  const seenIds = getSeenIds();
+  let unseen = QUESTION_BANK.filter(q => !seenIds.includes(q.id));
+
+  // Not enough unseen questions left? Time to reset the cycle.
+  if (unseen.length < QUESTIONS_PER_ROUND) {
+    resetSeenIds();
+    unseen = [...QUESTION_BANK]; // everything is available again
+  }
+
+  const chosen = shuffle(unseen).slice(0, QUESTIONS_PER_ROUND);
+
+  // Also shuffle each question's answer options so the correct
+  // answer isn't always in the same position.
+  return chosen.map(q => {
+    const optionsWithFlag = q.options.map((text, idx) => ({
+      text,
+      isCorrect: idx === q.correct
+    }));
+    const shuffledOptions = shuffle(optionsWithFlag);
+    return { id: q.id, text: q.text, options: shuffledOptions };
+  });
+}
+
+// ---------------------------------------------------------------------
+// 3. GAME STATE
+// ---------------------------------------------------------------------
+let currentUser = null; // set once the user logs in / continues as guest
+let roundQuestions = [];
+let currentIndex = 0;
+let correctCount = 0;
+let timeLeft = TOTAL_TIME_SECONDS;
+let timerInterval = null;
+let answerLocked = false; // prevents double-clicking an option
+
+// ---------------------------------------------------------------------
+// 4. SCREEN / DOM ELEMENTS
+// ---------------------------------------------------------------------
+const loginScreen = document.getElementById("login-screen");
+const startScreen = document.getElementById("start-screen");
+const quizScreen = document.getElementById("quiz-screen");
+const winScreen = document.getElementById("win-screen");
+const loseScreen = document.getElementById("lose-screen");
+
+const timerEl = document.getElementById("timer");
+const questionTextEl = document.getElementById("question-text");
+const optionsContainerEl = document.getElementById("options-container");
+const progressDotsEl = document.getElementById("progress-dots");
+const welcomeNameEl = document.getElementById("welcome-name");
+
+function showScreen(screenToShow) {
+  [loginScreen, startScreen, quizScreen, winScreen, loseScreen].forEach(s => s.classList.add("d-none"));
+  screenToShow.classList.remove("d-none");
+}
+
+// ---------------------------------------------------------------------
+// Start / restart a round
+// ---------------------------------------------------------------------
+function startGame() {
+  roundQuestions = pickQuestionsForRound();
+  currentIndex = 0;
+  correctCount = 0;
+  timeLeft = TOTAL_TIME_SECONDS;
+  answerLocked = false;
+
+  buildProgressDots();
+  showScreen(quizScreen);
+  renderQuestion();
+  startTimer();
+}
+
+function buildProgressDots() {
+  progressDotsEl.innerHTML = "";
+  for (let i = 0; i < QUESTIONS_PER_ROUND; i++) {
+    const dot = document.createElement("span");
+    dot.id = "dot-" + i;
+    progressDotsEl.appendChild(dot);
+  }
+  updateProgressDots();
+}
+
+function updateProgressDots() {
+  for (let i = 0; i < QUESTIONS_PER_ROUND; i++) {
+    const dot = document.getElementById("dot-" + i);
+    dot.className = ""; // reset classes
+    if (i === currentIndex) dot.classList.add("active");
+  }
+}
+
+function startTimer() {
+  clearInterval(timerInterval);
+  updateTimerDisplay();
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    updateTimerDisplay();
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      endRound(false); // ran out of time = loss
+    }
+  }, 1000);
+}
+
+function updateTimerDisplay() {
+  timerEl.textContent = timeLeft + "s";
+  timerEl.classList.toggle("low-time", timeLeft <= 10);
+}
+
+// ---------------------------------------------------------------------
+// Render the current question + its (shuffled) options as buttons
+// ---------------------------------------------------------------------
+function renderQuestion() {
+  answerLocked = false;
+  const q = roundQuestions[currentIndex];
+  questionTextEl.textContent = `Q${currentIndex + 1}. ${q.text}`;
+  optionsContainerEl.innerHTML = "";
+
+  q.options.forEach(opt => {
+    const btn = document.createElement("button");
+    btn.className = "btn btn-outline-dark option-btn";
+    btn.textContent = opt.text;
+    btn.addEventListener("click", () => handleAnswer(opt.isCorrect, btn));
+    optionsContainerEl.appendChild(btn);
+  });
+
+  updateProgressDots();
+}
+
+function handleAnswer(isCorrect, clickedBtn) {
+  if (answerLocked) return; // ignore extra clicks while we show feedback
+  answerLocked = true;
+
+  clickedBtn.classList.add(isCorrect ? "correct" : "wrong");
+
+  const dot = document.getElementById("dot-" + currentIndex);
+  dot.classList.remove("active");
+  dot.classList.add(isCorrect ? "done-correct" : "done-wrong");
+
+  if (isCorrect) {
+    correctCount++;
+  } else {
+    // One wrong answer means the round is lost immediately.
+    clearInterval(timerInterval);
+    setTimeout(() => endRound(false), 500);
+    return;
+  }
+
+  // Small delay so the user sees the green highlight before moving on
+  setTimeout(() => {
+    currentIndex++;
+    if (currentIndex >= roundQuestions.length) {
+      clearInterval(timerInterval);
+      endRound(true);
+    } else {
+      renderQuestion();
+    }
+  }, 500);
+}
+
+function endRound(won) {
+  // Remember these 5 question IDs as "seen" regardless of win/lose,
+  // so the next round mixes in fresh ones.
+  markAsSeen(roundQuestions.map(q => q.id));
+
+  if (won && correctCount === QUESTIONS_PER_ROUND) {
+    showScreen(winScreen);
+  } else {
+    showScreen(loseScreen);
+  }
+}
+
+// ---------------------------------------------------------------------
+// 5. EVENT LISTENERS
+// ---------------------------------------------------------------------
+document.getElementById("start-btn").addEventListener("click", startGame);
+document.getElementById("retry-btn").addEventListener("click", startGame);
+
+// Simple share handlers - opens the native share sheet if available,
+// otherwise falls back to copying a share message.
+function shareGame() {
+  const shareData = {
+    title: "Vodacom Early Careers Trivia",
+    text: "I just played the Vodacom Early Careers 30-Second Trivia Challenge!",
+    url: "https://www.vodacom.com/early-careers.php"
+  };
+  if (navigator.share) {
+    navigator.share(shareData).catch(() => {});
+  } else {
+    navigator.clipboard.writeText(shareData.url);
+    alert("Link copied! Share it with your friends.");
+  }
+}
+document.getElementById("win-share-btn").addEventListener("click", shareGame);
+document.getElementById("lose-share-btn").addEventListener("click", shareGame);
+
+// ---------------------------------------------------------------------
+// 6. LOGIN SCREEN WIRING
+// ---------------------------------------------------------------------
+
+// -- Tab switching: "Quick Guest" vs "Log In / Sign Up" --
+const guestPanel = document.getElementById("guest-panel");
+const accountPanel = document.getElementById("account-panel");
+
+function switchLoginTab(tab) {
+  document.querySelectorAll("#login-tabs .nav-link").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.tab === tab);
+  });
+  guestPanel.classList.toggle("d-none", tab !== "guest");
+  accountPanel.classList.toggle("d-none", tab !== "account");
+}
+document.querySelectorAll("#login-tabs .nav-link").forEach(btn => {
+  btn.addEventListener("click", () => switchLoginTab(btn.dataset.tab));
+});
+
+// -- Within the account panel: "Log In" vs "Sign Up" mode --
+let accountMode = "login";
+function setAccountMode(mode) {
+  accountMode = mode;
+  document.getElementById("mode-login-btn").classList.toggle("active", mode === "login");
+  document.getElementById("mode-signup-btn").classList.toggle("active", mode === "signup");
+  document.getElementById("confirm-password-wrapper").classList.toggle("d-none", mode !== "signup");
+  document.getElementById("account-submit-btn").textContent = mode === "login" ? "Log In" : "Sign Up";
+  document.getElementById("account-error").classList.add("d-none");
+}
+document.getElementById("mode-login-btn").addEventListener("click", () => setAccountMode("login"));
+document.getElementById("mode-signup-btn").addEventListener("click", () => setAccountMode("signup"));
+
+function showAuthError(elId, message) {
+  const el = document.getElementById(elId);
+  el.textContent = message;
+  el.classList.remove("d-none");
+}
+
+// -- Guest continue button --
+document.getElementById("guest-continue-btn").addEventListener("click", async () => {
+  const name = document.getElementById("guest-name").value;
+  const email = document.getElementById("guest-email").value;
+  const result = await AuthAPI.continueAsGuest(name, email);
+  if (!result.success) {
+    showAuthError("guest-error", result.error);
+    return;
+  }
+  onLoginSuccess(result.user);
+});
+
+// -- Account log in / sign up submit button (same button, behaviour
+//    depends on accountMode) --
+document.getElementById("account-submit-btn").addEventListener("click", async () => {
+  const username = document.getElementById("account-username").value;
+  const password = document.getElementById("account-password").value;
+  const confirmPassword = document.getElementById("account-confirm-password").value;
+
+  if (accountMode === "signup" && password !== confirmPassword) {
+    showAuthError("account-error", "Passwords don't match.");
+    return;
+  }
+
+  const result = accountMode === "login"
+    ? await AuthAPI.logIn(username, password)
+    : await AuthAPI.signUp(username, password);
+
+  if (!result.success) {
+    showAuthError("account-error", result.error);
+    return;
+  }
+  onLoginSuccess(result.user);
+});
+
+// -- Called after any successful guest/login/signup --
+function onLoginSuccess(user) {
+  currentUser = user;
+  welcomeNameEl.textContent = user.type === "guest" ? user.name : user.username;
+  showScreen(startScreen);
+}
+
+// -- Log out button on the start screen --
+document.getElementById("logout-btn").addEventListener("click", () => {
+  AuthAPI.logOut();
+  currentUser = null;
+  showScreen(loginScreen);
+});
+
+// -- On page load: if someone is already logged in (from a previous
+//    visit), skip straight to the start screen instead of asking again --
+(function initSession() {
+  const existingUser = AuthAPI.getCurrentUser();
+  if (existingUser) {
+    onLoginSuccess(existingUser);
+  } else {
+    showScreen(loginScreen);
+  }
+})();
+</script>
+
+</body>
+</html>
