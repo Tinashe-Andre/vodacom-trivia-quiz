@@ -136,6 +136,10 @@
           <label class="form-label">Email</label>
           <input id="guest-email" type="email" class="form-control" placeholder="you@example.com">
         </div>
+        <div class="mb-3">
+          <label class="form-label">Cell Number</label>
+          <input id="guest-phone" type="tel" class="form-control" placeholder="e.g. 082 123 4567">
+        </div>
         <div id="guest-error" class="text-danger small mb-2 d-none"></div>
         <button id="guest-continue-btn" class="btn btn-danger w-100">Continue as Guest</button>
       </div>
@@ -157,6 +161,10 @@
         <div id="confirm-password-wrapper" class="mb-3 d-none">
           <label class="form-label">Confirm Password</label>
           <input id="account-confirm-password" type="password" class="form-control">
+        </div>
+        <div id="account-phone-wrapper" class="mb-3 d-none">
+          <label class="form-label">Cell Number</label>
+          <input id="account-phone" type="tel" class="form-control" placeholder="e.g. 082 123 4567">
         </div>
         <div id="account-error" class="text-danger small mb-2 d-none"></div>
         <button id="account-submit-btn" class="btn btn-danger w-100">Log In</button>
@@ -303,22 +311,30 @@ function saveStoredUsers(users) {
 const AuthAPI = {
 
   // ---- Guests: no password, just enough to know who played ----
-  async continueAsGuest(name, email) {
+  // Vodacom wants name + email + cell number captured for stats purposes,
+  // even though this isn't a "real" login - it just needs to be stored
+  // somewhere durable. See LeadStats.record() below for where that
+  // actually gets sent/saved.
+  async continueAsGuest(name, email, phone) {
     // SWAP POINT: replace this block with a real request, e.g.
     //   const res = await fetch("/api/guest", { method: "POST",
     //     headers: {"Content-Type":"application/json"},
-    //     body: JSON.stringify({ name, email }) });
+    //     body: JSON.stringify({ name, email, phone }) });
     //   return await res.json(); // { success, user, error }
-    if (!name.trim() || !email.trim()) {
-      return { success: false, error: "Please enter both your name and email." };
+    if (!name.trim() || !email.trim() || !phone.trim()) {
+      return { success: false, error: "Please enter your name, email, and cell number." };
     }
-    const user = { id: generateId(), type: "guest", name: name.trim(), email: email.trim() };
+    const user = {
+      id: generateId(), type: "guest",
+      name: name.trim(), email: email.trim(), phone: phone.trim()
+    };
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+    LeadStats.record(user); // send name/email/phone off for stats tracking
     return { success: true, user };
   },
 
   // ---- Sign up: create a new username/password account ----
-  async signUp(username, password) {
+  async signUp(username, password, phone) {
     // SWAP POINT: replace this block with fetch("/api/signup", { ... })
     username = username.trim();
     if (!username || !password) {
@@ -327,6 +343,9 @@ const AuthAPI = {
     if (password.length < 6) {
       return { success: false, error: "Password must be at least 6 characters." };
     }
+    if (!phone || !phone.trim()) {
+      return { success: false, error: "Please enter your cell number." };
+    }
     const users = getStoredUsers();
     if (users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
       return { success: false, error: "That username is already taken." };
@@ -334,14 +353,15 @@ const AuthAPI = {
     const salt = generateSalt();
     const passwordHash = await hashPassword(password, salt);
     const newUser = {
-      id: generateId(), type: "account", username, salt, passwordHash,
+      id: generateId(), type: "account", username, phone: phone.trim(), salt, passwordHash,
       createdAt: new Date().toISOString()
     };
     users.push(newUser);
     saveStoredUsers(users);
 
-    const sessionUser = { id: newUser.id, type: "account", username };
+    const sessionUser = { id: newUser.id, type: "account", username, phone: newUser.phone };
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(sessionUser));
+    LeadStats.record(sessionUser); // send username/phone off for stats tracking
     return { success: true, user: sessionUser };
   },
 
@@ -371,6 +391,64 @@ const AuthAPI = {
 
   logOut() {
     localStorage.removeItem(CURRENT_USER_KEY);
+  }
+};
+
+// ---------------------------------------------------------------------
+// LEAD STATS (name / email / phone captured for Vodacom's records)
+// -------------------------------------------------------------------
+// IMPORTANT - read this before relying on it for real numbers:
+// Right now, LeadStats.record() just appends to a list in THIS browser's
+// localStorage. That means it only sees people who played on this
+// specific device/browser - it is NOT a shared, central store of every
+// player across everyone's phones and laptops. It's a stopgap so nothing
+// is lost while we decide how this should really be stored.
+//
+// SWAP POINT: once there's a real backend decision, replace the body of
+// record() with something like:
+//   await fetch("https://<your-chosen-service>/submit", {
+//     method: "POST",
+//     headers: { "Content-Type": "application/json" },
+//     body: JSON.stringify(user)
+//   });
+// (e.g. a hosted form-backend service, a real database endpoint, or a
+// Vodacom-owned API) - and every lead will flow there automatically,
+// no changes needed anywhere else in the app.
+//
+// Until then, exportAsCSV() lets you download whatever this browser
+// has collected as a spreadsheet, so it's not just trapped and unusable.
+// ---------------------------------------------------------------------
+const LEADS_KEY = "vodacomTrivia_leads";
+
+const LeadStats = {
+  record(user) {
+    const leads = JSON.parse(localStorage.getItem(LEADS_KEY) || "[]");
+    leads.push({
+      name: user.name || user.username || "",
+      email: user.email || "",
+      phone: user.phone || "",
+      type: user.type,
+      capturedAt: new Date().toISOString()
+    });
+    localStorage.setItem(LEADS_KEY, JSON.stringify(leads));
+  },
+
+  // Downloads everything captured on THIS browser as a .csv file you
+  // can open in Excel/Google Sheets. Call LeadStats.exportAsCSV() from
+  // the browser console (F12) to trigger it.
+  exportAsCSV() {
+    const leads = JSON.parse(localStorage.getItem(LEADS_KEY) || "[]");
+    const header = "Name,Email,Phone,Type,Captured At\n";
+    const rows = leads.map(l =>
+      [l.name, l.email, l.phone, l.type, l.capturedAt].join(",")
+    ).join("\n");
+    const blob = new Blob([header + rows], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "vodacom-trivia-leads.csv";
+    a.click();
+    URL.revokeObjectURL(url);
   }
 };
 
@@ -566,7 +644,7 @@ function startTimer() {
     updateTimerDisplay();
     if (timeLeft <= 0) {
       clearInterval(timerInterval);
-      endRound(false); // ran out of time = loss
+      endRound(); // ran out of time - whatever's been answered so far stands
     }
   }, 1000);
 }
@@ -608,31 +686,29 @@ function handleAnswer(isCorrect, clickedBtn) {
 
   if (isCorrect) {
     correctCount++;
-  } else {
-    // One wrong answer means the round is lost immediately.
-    clearInterval(timerInterval);
-    setTimeout(() => endRound(false), 500);
-    return;
   }
+  // A wrong answer no longer ends the round early - everyone plays
+  // through all 5 questions, and we only check the final score once
+  // all 5 have been answered (see endRound below).
 
-  // Small delay so the user sees the green highlight before moving on
+  // Small delay so the user sees the green/red highlight before moving on
   setTimeout(() => {
     currentIndex++;
     if (currentIndex >= roundQuestions.length) {
       clearInterval(timerInterval);
-      endRound(true);
+      endRound();
     } else {
       renderQuestion();
     }
   }, 500);
 }
 
-function endRound(won) {
+function endRound() {
   // Remember these 5 question IDs as "seen" regardless of win/lose,
   // so the next round mixes in fresh ones.
   markAsSeen(roundQuestions.map(q => q.id));
 
-  if (won && correctCount === QUESTIONS_PER_ROUND) {
+  if (correctCount === QUESTIONS_PER_ROUND) {
     showScreen(winScreen);
   } else {
     showScreen(loseScreen);
@@ -689,6 +765,7 @@ function setAccountMode(mode) {
   document.getElementById("mode-login-btn").classList.toggle("active", mode === "login");
   document.getElementById("mode-signup-btn").classList.toggle("active", mode === "signup");
   document.getElementById("confirm-password-wrapper").classList.toggle("d-none", mode !== "signup");
+  document.getElementById("account-phone-wrapper").classList.toggle("d-none", mode !== "signup");
   document.getElementById("account-submit-btn").textContent = mode === "login" ? "Log In" : "Sign Up";
   document.getElementById("account-error").classList.add("d-none");
 }
@@ -705,7 +782,8 @@ function showAuthError(elId, message) {
 document.getElementById("guest-continue-btn").addEventListener("click", async () => {
   const name = document.getElementById("guest-name").value;
   const email = document.getElementById("guest-email").value;
-  const result = await AuthAPI.continueAsGuest(name, email);
+  const phone = document.getElementById("guest-phone").value;
+  const result = await AuthAPI.continueAsGuest(name, email, phone);
   if (!result.success) {
     showAuthError("guest-error", result.error);
     return;
@@ -719,6 +797,7 @@ document.getElementById("account-submit-btn").addEventListener("click", async ()
   const username = document.getElementById("account-username").value;
   const password = document.getElementById("account-password").value;
   const confirmPassword = document.getElementById("account-confirm-password").value;
+  const phone = document.getElementById("account-phone").value;
 
   if (accountMode === "signup" && password !== confirmPassword) {
     showAuthError("account-error", "Passwords don't match.");
@@ -727,7 +806,7 @@ document.getElementById("account-submit-btn").addEventListener("click", async ()
 
   const result = accountMode === "login"
     ? await AuthAPI.logIn(username, password)
-    : await AuthAPI.signUp(username, password);
+    : await AuthAPI.signUp(username, password, phone);
 
   if (!result.success) {
     showAuthError("account-error", result.error);
