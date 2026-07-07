@@ -56,17 +56,57 @@
   #progress-dots span.done-correct { background: #198754; }
   #progress-dots span.done-wrong { background: #dc3545; }
   #progress-dots span.active { background: #E60000; }
+
+  /* ---- Vodacom-red active states for the login screen toggles ---- */
+  /* "Quick Guest" vs "Log In / Sign Up" pills */
+  #login-tabs .nav-link.active {
+    background-color: #E60000;
+    color: #fff;
+  }
+  #login-tabs .nav-link {
+    color: #333;
+  }
+  /* "Log In" vs "Sign Up" buttons inside the account panel */
+  #mode-login-btn.active,
+  #mode-signup-btn.active {
+    background-color: #E60000;
+    border-color: #E60000;
+    color: #fff;
+  }
+
+  footer.vc-footer {
+    text-align: center;
+    color: #777;
+    font-size: 0.85rem;
+    padding: 2rem 1rem 1rem;
+  }
 </style>
 </head>
 <body>
+<div class="d-flex flex-column min-vh-100">
 
 <nav class="navbar vc-navbar mb-0">
-  <div class="container">
+  <div class="container d-flex align-items-center gap-2">
+    <!-- ============================================================
+         LOGO PLACEHOLDER
+         This is a simple stand-in mark in Vodacom red, not the real
+         Vodacom logo (that's a trademarked brand asset - grab the
+         real one from your brand/marketing team).
+         To swap it in: delete this whole <svg>...</svg> block and
+         replace it with something like:
+           <img src="logo.png" alt="Vodacom" height="32">
+         (put logo.png in the same folder as this file, or in an
+         "assets" folder and adjust the path)...
+    ============================================================ -->
+    <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="16" cy="16" r="16" fill="#ffffff"/>
+      <text x="16" y="22" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#E60000">V</text>
+    </svg>
     <span class="navbar-brand text-white fw-bold mb-0">Vodacom Early Careers</span>
   </div>
 </nav>
 
-<div class="container">
+<div class="container flex-grow-1">
 
   <!-- ================= LOGIN SCREEN ================= -->
   <div id="login-screen" class="card vc-card">
@@ -178,6 +218,12 @@
 
 </div>
 
+<footer class="vc-footer">
+  &copy; <span id="footer-year"></span> Vodacom. All rights reserved.
+</footer>
+
+</div>
+
 <script>
 /* =========================================================================
    VODACOM 30-SEC TRIVIA GAME
@@ -192,6 +238,9 @@
    5. Event listeners wiring buttons to functions
    6. Login screen wiring
    ========================================================================= */
+
+// Keep the footer's copyright year current automatically
+document.getElementById("footer-year").textContent = new Date().getFullYear();
 
 // ---------------------------------------------------------------------
 // 0. AUTH MODULE
